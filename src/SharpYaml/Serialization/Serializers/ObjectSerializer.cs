@@ -46,6 +46,7 @@
 using System;
 using System.Reflection;
 using SharpYaml.Events;
+using SharpYaml.Serialization.Descriptors;
 using SharpYaml.Serialization.Logging;
 
 namespace SharpYaml.Serialization.Serializers
@@ -138,7 +139,9 @@ namespace SharpYaml.Serialization.Serializers
         /// <returns>A new instance of the object or <see cref="ObjectContext.Instance" /> if not null</returns>
         protected virtual void CreateOrTransformObject(ref ObjectContext objectContext)
         {
-            if (objectContext.Instance == null)
+            if (objectContext.Instance == null
+                || (objectContext.Descriptor is DictionaryDescriptor && objectContext.Settings.DeserializeIntoSettings.DictionaryStrategy == ExistingDictionaryStrategy.CreateNew)
+                || (objectContext.Descriptor is CollectionDescriptor && objectContext.Settings.DeserializeIntoSettings.CollectionStrategy == ExistingCollectionStrategy.CreateNew))
             {
                 objectContext.Instance = objectContext.SerializerContext.ObjectFactory.Create(objectContext.Descriptor.Type);
             }

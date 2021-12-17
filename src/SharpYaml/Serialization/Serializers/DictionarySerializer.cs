@@ -76,9 +76,11 @@ namespace SharpYaml.Serialization.Serializers
         {
             var dictionaryDescriptor = (DictionaryDescriptor) objectContext.Descriptor;
 
+            var allowReplace = objectContext.Settings.DeserializeIntoSettings.DictionaryStrategy == ExistingDictionaryStrategy.AddOrReplaceItems;
+
             if (dictionaryDescriptor.IsPureDictionary)
             {
-                ReadDictionaryItems(ref objectContext);
+                ReadDictionaryItems(ref objectContext, allowReplace);
             }
             else if (objectContext.Settings.SerializeDictionaryItemsAsMembers && dictionaryDescriptor.KeyType == typeof(string))
             {
@@ -87,7 +89,7 @@ namespace SharpYaml.Serialization.Serializers
                 if (!TryReadMember(ref objectContext, out memberName))
                 {
                     var value = ReadMemberValue(ref objectContext, null, null, dictionaryDescriptor.ValueType);
-                    dictionaryDescriptor.AddToDictionary(objectContext.Instance, memberName, value);
+                    dictionaryDescriptor.AddToDictionary(objectContext.Instance, memberName, value, allowReplace);
                 }
             }
             else
@@ -99,7 +101,7 @@ namespace SharpYaml.Serialization.Serializers
                     reader.Parser.MoveNext();
 
                     reader.Expect<MappingStart>();
-                    ReadDictionaryItems(ref objectContext);
+                    ReadDictionaryItems(ref objectContext, allowReplace);
                     reader.Expect<MappingEnd>();
                     return;
                 }
@@ -144,7 +146,7 @@ namespace SharpYaml.Serialization.Serializers
         /// Reads the dictionary items key-values.
         /// </summary>
         /// <param name="objectContext"></param>
-        protected virtual void ReadDictionaryItems(ref ObjectContext objectContext)
+        protected virtual void ReadDictionaryItems(ref ObjectContext objectContext, bool allowReplace)
         {
             var dictionaryDescriptor = (DictionaryDescriptor) objectContext.Descriptor;
 
@@ -159,7 +161,7 @@ namespace SharpYaml.Serialization.Serializers
                     {
                         // Read key and value
                         var keyValue = ReadDictionaryItem(ref objectContext, new KeyValuePair<Type, Type>(dictionaryDescriptor.KeyType, dictionaryDescriptor.ValueType));
-                        dictionaryDescriptor.AddToDictionary(objectContext.Instance, keyValue.Key, keyValue.Value);
+                        dictionaryDescriptor.AddToDictionary(objectContext.Instance, keyValue.Key, keyValue.Value, allowReplace);
                     }
                     catch (YamlException ex)
                     {
@@ -173,7 +175,7 @@ namespace SharpYaml.Serialization.Serializers
                 {
                     // Read key and value
                     var keyValue = ReadDictionaryItem(ref objectContext, new KeyValuePair<Type, Type>(dictionaryDescriptor.KeyType, dictionaryDescriptor.ValueType));
-                    dictionaryDescriptor.AddToDictionary(objectContext.Instance, keyValue.Key, keyValue.Value);
+                    dictionaryDescriptor.AddToDictionary(objectContext.Instance, keyValue.Key, keyValue.Value, allowReplace);
                 }
             }
         }

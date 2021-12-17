@@ -62,17 +62,18 @@ namespace SharpYaml.Serialization.Descriptors
         private readonly Type valueType;
         private readonly MethodInfo getEnumeratorGeneric;
         private readonly MethodInfo addMethod;
+		private readonly MethodInfo indexerMethod;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="DictionaryDescriptor" /> class.
-        /// </summary>
-        /// <param name="attributeRegistry">The attribute registry.</param>
-        /// <param name="type">The type.</param>
-        /// <param name="emitDefaultValues">if set to <c>true</c> [emit default values].</param>
-        /// <param name="respectPrivateSetters">If set to <c>true</c> will de/serialize properties with private setters.</param>
-        /// <param name="namingConvention">The naming convention.</param>
-        /// <exception cref="System.ArgumentException">Expecting a type inheriting from System.Collections.IDictionary;type</exception>
-        public DictionaryDescriptor(IAttributeRegistry attributeRegistry, Type type, bool emitDefaultValues, bool respectPrivateSetters, IMemberNamingConvention namingConvention)
+		/// <summary>
+		/// Initializes a new instance of the <see cref="DictionaryDescriptor" /> class.
+		/// </summary>
+		/// <param name="attributeRegistry">The attribute registry.</param>
+		/// <param name="type">The type.</param>
+		/// <param name="emitDefaultValues">if set to <c>true</c> [emit default values].</param>
+		/// <param name="respectPrivateSetters">If set to <c>true</c> will de/serialize properties with private setters.</param>
+		/// <param name="namingConvention">The naming convention.</param>
+		/// <exception cref="System.ArgumentException">Expecting a type inheriting from System.Collections.IDictionary;type</exception>
+		public DictionaryDescriptor(IAttributeRegistry attributeRegistry, Type type, bool emitDefaultValues, bool respectPrivateSetters, IMemberNamingConvention namingConvention)
             : base(attributeRegistry, type, emitDefaultValues, respectPrivateSetters, namingConvention)
         {
             if (!IsDictionary(type))
@@ -87,12 +88,14 @@ namespace SharpYaml.Serialization.Descriptors
                 IsGenericDictionary = true;
                 getEnumeratorGeneric = typeof(DictionaryDescriptor).GetMethod("GetGenericEnumerable").MakeGenericMethod(keyType, valueType);
                 addMethod = interfaceType.GetMethod("Add", new[] {keyType, valueType});
+                indexerMethod = interfaceType.GetMethod("set_Item", new [] { keyType, valueType });
             }
             else
             {
                 keyType = typeof(object);
                 valueType = typeof(object);
                 addMethod = type.GetMethod("Add", new[] {keyType, valueType});
+                indexerMethod = interfaceType.GetMethod("set_Item", new[] { keyType, valueType });
             }
         }
 
@@ -179,24 +182,39 @@ namespace SharpYaml.Serialization.Descriptors
         /// <param name="dictionary">The dictionary.</param>
         /// <param name="key">The key.</param>
         /// <param name="value">The value.</param>
+        /// <param name="allowReplace">Allows to replace the value if the key is already present</param>
         /// <exception cref="System.InvalidOperationException">No Add() method found on dictionary [{0}].DoFormat(Type)</exception>
-        public void AddToDictionary(object dictionary, object key, object value)
+        public void AddToDictionary(object dictionary, object key, object value, bool allowReplace)
         {
             if (dictionary == null)
                 throw new ArgumentNullException("dictionary");
             var simpleDictionary = dictionary as IDictionary;
             if (simpleDictionary != null)
             {
-                simpleDictionary.Add(key, value);
+                if(allowReplace)
+                    simpleDictionary[key] = value;
+                else
+                    simpleDictionary.Add(key, value);
             }
             else
             {
-                // Only throw an exception if the addMethod is not accessible when adding to a dictionary
-                if (addMethod == null)
+                if (allowReplace)
                 {
-                    throw new InvalidOperationException("No Add() method found on dictionary [{0}]".DoFormat(Type));
+                    if (indexerMethod == null)
+                    {
+                        throw new InvalidOperationException("No indexer method found on dictionary [{0}]".DoFormat(Type));
+                    }
+                    indexerMethod.Invoke(dictionary, new object[] { key, value });
                 }
-                addMethod.Invoke(dictionary, new object[] {key, value});
+                else
+                {
+                    // Only throw an exception if the addMethod is not accessible when adding to a dictionary
+                    if (addMethod == null)
+                    {
+                        throw new InvalidOperationException("No Add() method found on dictionary [{0}]".DoFormat(Type));
+                    }
+                    addMethod.Invoke(dictionary, new object[] { key, value });
+                }
             }
         }
 

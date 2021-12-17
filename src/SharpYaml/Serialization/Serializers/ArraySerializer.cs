@@ -67,7 +67,7 @@ namespace SharpYaml.Serialization.Serializers
 
             reader.Expect<SequenceStart>();
             int index = 0;
-            if (isArray)
+            if (isArray && objectContext.Settings.DeserializeIntoSettings.ArrayStrategy == ExistingArrayStrategy.FillExisting)
             {
                 while (!reader.Accept<SequenceEnd>())
                 {

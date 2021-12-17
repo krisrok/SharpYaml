@@ -97,6 +97,7 @@ namespace SharpYaml.Serialization
             ObjectSerializerBackend = new DefaultObjectSerializerBackend();
             ComparerForKeySorting = new DefaultKeyComparer();
             NamingConvention = new DefaultNamingConvention();
+            DeserializeIntoSettings = new DeserializeIntoSettings();
 
             // Register default mapping for map and seq
             AssemblyRegistry.RegisterTagMapping("!!map", typeof(IDictionary<object, object>), false);
@@ -327,6 +328,11 @@ namespace SharpYaml.Serialization
         /// <value>The schema.</value>
         /// <exception cref="System.ArgumentNullException">value</exception>
         public IYamlSchema Schema { get { return schema; } }
+
+        /// <summary>
+        /// Settings used to configure population of pre-existing objects, e.g. by using <see cref="Serialization.Serializer.DeserializeInto{T}(string, T)"/> and overloads.
+        /// </summary>
+        public DeserializeIntoSettings DeserializeIntoSettings { get; set; }
 
         /// <summary>
         /// Register a mapping between a tag and a type.
